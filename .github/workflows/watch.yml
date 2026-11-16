@@ -35,7 +35,7 @@ jobs:
           # One pass per run; a full scan takes about 70s and the cron
           # schedule alone sets the rhythm.
           RUN_SECONDS: "0"
-        run: python scene_bot.py
+        run: python cinema_bot.py
 
       - name: Commit state
         run: |
