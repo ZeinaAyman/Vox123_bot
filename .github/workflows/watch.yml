@@ -1,51 +1,28 @@
-name: cinema-watch
-
+name: check
 on:
   schedule:
-    # Every 30 min. A full pass is ~110 requests paced 2s apart,
-    # so the site sees well under one request per second.
-    - cron: "*/30 * * * *"
+    - cron: "*/10 * * * *"
   workflow_dispatch:
-
+  repository_dispatch:
+    types: [ping]
+concurrency:
+  group: check
+  cancel-in-progress: false
 permissions:
   contents: write
-
-concurrency:
-  group: cinema-watch
-  cancel-in-progress: false
-
 jobs:
-  watch:
+  run:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - run: pip install -r requirements.txt
-
-      - name: Run watcher
+      - run: pip install requests
+      - run: python cinema_bot.py
         env:
-          TELEGRAM_TOKEN: ${{ secrets.CINEMA }}
-          TELEGRAM_CHAT_ID: ${{ secrets.CHAT_ID }}
-          STATE_FILE: "scene_state.json"
-          # One pass per run; a full scan takes about 70s and the cron
-          # schedule alone sets the rhythm.
-          RUN_SECONDS: "0"
-        run: python cinema_bot.py
-
-      - name: Commit state
-        run: |
+          TOKEN: ${{ secrets.CINEMA }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+      - run: |
           git config user.name bot
           git config user.email bot@users.noreply.github.com
-          git add scene_state.json || exit 0
-          git diff --cached --quiet && exit 0
-          git commit -m "state $(date -u +%FT%TZ)"
-          for i in 1 2 3; do
-            git pull --rebase --autostash -X ours && git push && exit 0
-            sleep 5
-          done
-          exit 1
+          git add seen.json
+          git commit -m update || true
+          git push || true
